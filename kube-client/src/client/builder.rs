@@ -1,6 +1,7 @@
 use bytes::Bytes;
 use http::{Request, Response};
-use hyper::{self, client::HttpConnector};
+use hyper;
+#[cfg(not(target_family = "wasm"))] use hyper::client::HttpConnector;
 use hyper_timeout::TimeoutConnector;
 pub use kube_core::response::Status;
 use tower::{util::BoxService, BoxError, Layer, Service, ServiceBuilder};
@@ -61,6 +62,7 @@ impl<Svc> ClientBuilder<Svc> {
     }
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl TryFrom<Config> for ClientBuilder<BoxService<Request<hyper::Body>, Response<Box<DynBody>>, BoxError>> {
     type Error = Error;
 

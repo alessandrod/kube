@@ -122,6 +122,7 @@ impl Client {
     ///
     /// If you already have a [`Config`] then use [`Client::try_from`](Self::try_from)
     /// instead.
+    #[cfg(not(target_family = "wasm"))]
     pub async fn try_default() -> Result<Self> {
         Self::try_from(Config::infer().await.map_err(Error::InferConfig)?)
     }
@@ -451,6 +452,7 @@ fn handle_api_errors(text: &str, s: StatusCode) -> Result<()> {
     }
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl TryFrom<Config> for Client {
     type Error = Error;
 
