@@ -554,9 +554,18 @@ fn ensure_trailing_newline(mut data: Vec<u8>) -> Vec<u8> {
 }
 
 /// Returns kubeconfig path from `$HOME/.kube/config`.
+#[cfg(not(target_family = "wasm"))]
 fn default_kube_path() -> Option<PathBuf> {
     use dirs::home_dir;
     home_dir().map(|h| h.join(".kube").join("config"))
+}
+
+#[cfg(target_family = "wasm")]
+fn default_kube_path() -> Option<PathBuf> {
+    std::env::var("HOME")
+        .ok()
+        .map(|h| PathBuf::from(h))
+        .map(|h| h.join(".kube").join("config"))
 }
 
 #[cfg(test)]
