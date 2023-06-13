@@ -489,6 +489,7 @@ pub struct ExecCredentialStatus {
     pub client_key_data: Option<String>,
 }
 
+#[cfg(not(target_family = "wasm"))]
 fn auth_exec(auth: &ExecConfig) -> Result<ExecCredential, Error> {
     let mut cmd = match &auth.command {
         Some(cmd) => Command::new(cmd),
@@ -548,6 +549,29 @@ fn auth_exec(auth: &ExecConfig) -> Result<ExecCredential, Error> {
         });
     }
     let creds = serde_json::from_slice(&out.stdout).map_err(Error::AuthExecParse)?;
+
+    Ok(creds)
+}
+
+#[cfg(target_family = "wasm")]
+fn auth_exec(auth: &ExecConfig) -> Result<ExecCredential, Error> {
+    extern "C" {
+        fn wasm_host_k8s_auth_exec(buf: *const u8, buf_len: *mut usize, buf_cap: usize) -> i32;
+    }
+
+    let mut buf = Vec::with_capacity(1024 * 64); // FIXME
+    serde_json::to_writer(&mut buf, &auth).map_err(Error::AuthExecSerialize)?;
+    let mut buf_len = buf.len();
+    #[allow(unsafe_code)]
+    let ret = unsafe { wasm_host_k8s_auth_exec(buf.as_ptr(), &mut buf_len, buf.capacity()) };
+    if ret != 0 {
+        return Err(Error::AuthExec("wasm_host_k8s_auth_exec failed".into()));
+    }
+    #[allow(unsafe_code)]
+    unsafe {
+        buf.set_len(buf_len);
+    }
+    let creds = serde_json::from_slice(&buf).map_err(Error::AuthExecParse)?;
 
     Ok(creds)
 }
